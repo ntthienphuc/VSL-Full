@@ -56,6 +56,7 @@ public class CameraActivity extends AppCompatActivity {
             });
 
     @Override
+
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
@@ -106,7 +107,7 @@ public class CameraActivity extends AppCompatActivity {
                     if (result.getResultCode() == RESULT_OK && result.getData() != null) {
                         Uri selectedVideoUri = result.getData().getData();
                         if (selectedVideoUri != null) {
-                            viewModel.translateVideo(this, selectedVideoUri);
+                            viewModel.translateNormalVideo(this, selectedVideoUri);
                         } else {
                             showToast("Không có video nào được chọn", false);
                         }
