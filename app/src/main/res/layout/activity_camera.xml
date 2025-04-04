@@ -6,11 +6,10 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     tools:context=".view.CameraActivity">
 
-
     <androidx.camera.view.PreviewView
         android:id="@+id/viewFinder"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"/>
+        android:layout_height="match_parent" />
 
     <androidx.appcompat.widget.SwitchCompat
         android:id="@+id/translateOption"
@@ -33,9 +32,7 @@
         android:textSize="16sp"
         android:text="@string/word_option"
         android:textColor="@color/main"
-        android:layout_below="@id/translateOption"
-    />
-
+        android:layout_below="@id/translateOption" />
 
     <TextView
         android:id="@+id/recordingTime"
@@ -84,6 +81,17 @@
         app:tint="@color/main" />
 
     <ImageButton
+        android:layout_width="40sp"
+        android:layout_height="40sp"
+        android:layout_below="@id/flipCamera"
+        android:layout_marginEnd="10sp"
+        android:layout_alignParentEnd="true"
+        android:id="@+id/clearVideosButton"
+        android:src="@drawable/bin"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        app:tint="@color/main" />
+
+    <ImageButton
         android:layout_width="50sp"
         android:layout_height="50sp"
         android:layout_marginEnd="10sp"
@@ -94,8 +102,5 @@
         android:src="@drawable/baseline_video_library_24"
         android:background="?attr/selectableItemBackgroundBorderless"
         app:tint="@color/main" />
-
-
-
 
 </RelativeLayout>

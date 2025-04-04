@@ -7,6 +7,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.media.MediaScannerConnection;
 import android.net.ConnectivityManager;
 import android.net.Network;
@@ -116,9 +117,7 @@ public class CameraViewModel extends AndroidViewModel {
     private Context context;
 
     // --- Các thành phần mới cho việc gửi video liên tục ---
-    // Queue chứa các file video tạm đã ghi xong
     private final BlockingQueue<File> videoQueue = new LinkedBlockingQueue<>();
-    // ExecutorService dùng một luồng đơn để gửi video từ queue
     private final ExecutorService videoSenderExecutor = Executors.newSingleThreadExecutor();
     // ----------------------------------------------------------
 
@@ -130,12 +129,9 @@ public class CameraViewModel extends AndroidViewModel {
 
     public CameraViewModel(@NonNull Application application) {
         super(application);
-        // Khởi tạo clientId duy nhất cho thiết bị
         clientId = UUID.randomUUID().toString();
-        // Khởi tạo SharedPreferences
         sharedPreferences = application.getSharedPreferences("AppPrefs", Context.MODE_PRIVATE);
         initializeTextToSpeech(application);
-        // Khởi chạy luồng gửi video khi khởi tạo ViewModel
         startVideoSender();
     }
 
@@ -155,13 +151,11 @@ public class CameraViewModel extends AndroidViewModel {
                 Preview preview = new Preview.Builder().build();
                 preview.setSurfaceProvider(previewView.getSurfaceProvider());
 
-                // Cấu hình VideoCapture với chất lượng HD và fallback nếu cần
                 Recorder recorder = new Recorder.Builder()
                         .setQualitySelector(QualitySelector.from(Quality.HD))
                         .build();
                 videoCapture = VideoCapture.withOutput(recorder);
 
-                // ImageAnalysis nếu cần
                 if (imageAnalysis == null) {
                     imageAnalysis = new ImageAnalysis.Builder()
                             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
@@ -180,6 +174,7 @@ public class CameraViewModel extends AndroidViewModel {
             } catch (Exception e) {
                 Log.e("CameraError", "Lỗi khởi tạo camera: " + e.getMessage(), e);
                 toastMessage.postValue(new Pair<>("Lỗi khởi tạo camera!", false));
+                tts.speak("Lỗi khởi tạo camera!", TextToSpeech.QUEUE_FLUSH, null, UUID.randomUUID().toString());
             }
         }, ContextCompat.getMainExecutor(previewView.getContext()));
     }
@@ -187,12 +182,11 @@ public class CameraViewModel extends AndroidViewModel {
     // Xử lý nút capture: chọn giữa chế độ Normal và Real-time
     public void captureVideoWithOptions(PreviewView previewView, boolean isRealTime) {
         if (recording != null || Boolean.TRUE.equals(isRecording.getValue())) {
-            // Khi bấm stop, dừng luôn và nếu ở realtime thì dừng gửi frames
             stopRecording();
         } else if (isRealTime) {
             isRealtimeActive = true;
-            // Thông báo bắt đầu quay realtime (Toast ngắn khoảng 2 giây)
-            toastMessage.postValue(new Pair<>("Bắt đầu quay realtime", false));
+            toastMessage.postValue(new Pair<>("Bắt đầu quay trực tiếp", false));
+            tts.speak("Bắt đầu quay trực tiếp", TextToSpeech.QUEUE_FLUSH, null, UUID.randomUUID().toString());
             startRecordingRealTime(previewView);
         } else {
             isRealtimeActive = false;
@@ -200,7 +194,7 @@ public class CameraViewModel extends AndroidViewModel {
         }
     }
 
-    // Quay video Normal: ghi thành 1 file MP4
+    // Quay video Normal
     private void startRecordingNormal(PreviewView previewView) {
         String name = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(System.currentTimeMillis());
         ContentValues contentValues = new ContentValues();
@@ -211,6 +205,7 @@ public class CameraViewModel extends AndroidViewModel {
         if (ActivityCompat.checkSelfPermission(previewView.getContext(), Manifest.permission.RECORD_AUDIO)
                 != PackageManager.PERMISSION_GRANTED) {
             toastMessage.postValue(new Pair<>("Thiếu quyền ghi âm!", false));
+            tts.speak("Thiếu quyền ghi âm!", TextToSpeech.QUEUE_FLUSH, null, UUID.randomUUID().toString());
             return;
         }
 
@@ -235,7 +230,7 @@ public class CameraViewModel extends AndroidViewModel {
                 });
     }
 
-    // Quay video Real-time: ghi 2 giây, dừng, đưa file vào queue gửi, sau đó khởi động lại ghi
+    // Quay video Real-time
     private void startRecordingRealTime(PreviewView previewView) {
         timerText.postValue("00:00");
 
@@ -254,6 +249,7 @@ public class CameraViewModel extends AndroidViewModel {
         if (ActivityCompat.checkSelfPermission(previewView.getContext(), Manifest.permission.RECORD_AUDIO)
                 != PackageManager.PERMISSION_GRANTED) {
             toastMessage.postValue(new Pair<>("Thiếu quyền ghi âm!", false));
+            tts.speak("Thiếu quyền ghi âm!", TextToSpeech.QUEUE_FLUSH, null, UUID.randomUUID().toString());
             return;
         }
 
@@ -271,7 +267,6 @@ public class CameraViewModel extends AndroidViewModel {
                                 if (recording != null) {
                                     recording.stop();
                                 }
-                                // Chỉ khởi động lại nếu realtime vẫn còn đang hoạt động
                                 new Handler(Looper.getMainLooper()).postDelayed(() -> {
                                     if (isRealtimeActive) {
                                         startRecordingRealTime(previewView);
@@ -283,12 +278,12 @@ public class CameraViewModel extends AndroidViewModel {
                         }
                     });
         } catch (Exception e) {
-            Log.e("RealTime", "Lỗi ghi video realtime: " + e.getMessage(), e);
-            toastMessage.postValue(new Pair<>("Lỗi ghi video realtime!", false));
+            Log.e("RealTime", "Lỗi ghi video trực tiếp: " + e.getMessage(), e);
+            toastMessage.postValue(new Pair<>("Lỗi ghi video trực tiếp!", false));
+            tts.speak("Lỗi ghi video trực tiếp!", TextToSpeech.QUEUE_FLUSH, null, UUID.randomUUID().toString());
         }
     }
-
-    // Dừng ghi video và nếu ở realtime thì dừng luôn việc gửi frames
+    // Dừng ghi video
     private void stopRecording() {
         if (recording != null) {
             recording.stop();
@@ -300,10 +295,9 @@ public class CameraViewModel extends AndroidViewModel {
         timerText.postValue("00:00");
         imageAnalysis.setAnalyzer(ContextCompat.getMainExecutor(context), ImageProxy::close);
         if (isRealtimeActive) {
-            // Thông báo dừng quay realtime (Toast ngắn khoảng 2 giây)
-            toastMessage.postValue(new Pair<>("Đã dừng quay realtime", false));
+            toastMessage.postValue(new Pair<>("Đã dừng quay trực tiếp", false));
+            tts.speak("Đã dừng quay trực tiếp", TextToSpeech.QUEUE_FLUSH, null, UUID.randomUUID().toString());
             isRealtimeActive = false;
-            // Duyệt và xóa từng file trong queue, sau đó thông báo MediaStore cập nhật
             for (File file : videoQueue) {
                 if (file.exists()) {
                     boolean deleted = file.delete();
@@ -316,7 +310,7 @@ public class CameraViewModel extends AndroidViewModel {
         }
     }
 
-    // Reset giao diện sau khi ghi xong
+    // Reset giao diện
     private void resetRecordingUI(PreviewView previewView) {
         captureButtonState.postValue(false);
         isRecording.postValue(false);
@@ -325,14 +319,14 @@ public class CameraViewModel extends AndroidViewModel {
         imageAnalysis.setAnalyzer(ContextCompat.getMainExecutor(previewView.getContext()), ImageProxy::close);
     }
 
-    // Xử lý finalize cho chế độ Normal
+    // Xử lý finalize chế độ Normal
     private void handleRecordingFinalizationNormal(VideoRecordEvent.Finalize finalizeEvent, PreviewView previewView) {
         resetRecordingUI(previewView);
         Uri videoUri = finalizeEvent.getOutputResults().getOutputUri();
         translateNormalVideo(previewView.getContext(), videoUri);
     }
 
-    // Xử lý finalize cho chế độ Real-time: sau khi ghi xong, lấy file video từ Uri và đưa vào queue gửi
+    // Xử lý finalize chế độ Real-time
     private void handleRecordingFinalizationRealtime(VideoRecordEvent.Finalize finalizeEvent, PreviewView previewView) {
         resetRecordingUI(previewView);
         Uri videoUri = finalizeEvent.getOutputResults().getOutputUri();
@@ -342,29 +336,31 @@ public class CameraViewModel extends AndroidViewModel {
         }
     }
 
-    // Dịch video chế độ Normal (gọi API "/spoter")
+    // Dịch video Normal
     public void translateNormalVideo(Context context, Uri videoUri) {
         if (isInternetAvailable(context)) {
             toastMessage.postValue(new Pair<>("Đang gửi video để dịch.", true));
+            tts.speak("Đang gửi video để dịch.", TextToSpeech.QUEUE_FLUSH, null, UUID.randomUUID().toString());
             callNormalTranslationApi(context, videoUri);
         } else {
             toastMessage.postValue(new Pair<>("Không có kết nối, sử dụng chế độ dịch offline.", true));
+            tts.speak("Không có kết nối, sử dụng chế độ dịch offline.", TextToSpeech.QUEUE_FLUSH, null, UUID.randomUUID().toString());
             callTranslationModel(context, videoUri);
         }
     }
 
-    // Dịch video chế độ Real-time (gọi API "/spoter_segmented")
+    // Dịch video Real-time
     public void translateRealtimeVideo(Context context, Uri videoUri) {
         if (isInternetAvailable(context)) {
-            // Đối với realtime chỉ hiển thị kết quả dự đoán
             callRealtimeTranslationApi(context, videoUri);
         } else {
             toastMessage.postValue(new Pair<>("Không có kết nối, sử dụng chế độ dịch offline.", true));
+            tts.speak("Không có kết nối, sử dụng chế độ dịch offline.", TextToSpeech.QUEUE_FLUSH, null, UUID.randomUUID().toString());
             callTranslationModel(context, videoUri);
         }
     }
 
-    // Dịch offline sử dụng model TFLite
+    // Dịch offline
     private void callTranslationModel(Context context, Uri videoUri) {
         try {
             VideoTranslationHandler translator = new VideoTranslationHandler(context, "model-final-new.tflite", "label400.txt");
@@ -376,21 +372,24 @@ public class CameraViewModel extends AndroidViewModel {
                     })
                     .exceptionally(ex -> {
                         toastMessage.postValue(new Pair<>("Lỗi dịch offline.", true));
+                        tts.speak("Lỗi dịch offline.", TextToSpeech.QUEUE_FLUSH, null, UUID.randomUUID().toString());
                         translator.close();
                         return null;
                     });
         } catch (IOException e) {
             toastMessage.postValue(new Pair<>("Lỗi tải model.", true));
+            tts.speak("Lỗi tải model.", TextToSpeech.QUEUE_FLUSH, null, UUID.randomUUID().toString());
         }
     }
 
-    // API gọi cho video Normal
+    // API Normal
     private void callNormalTranslationApi(Context context, Uri videoUri) {
-        String ip = sharedPreferences.getString("api_ip", "192.168.0.100"); // Lấy IP từ SharedPreferences
-        String apiUrl = "http://" + ip + ":80/spoter"; // URL động
+        String ip = sharedPreferences.getString("api_ip", "192.168.0.100");
+        String apiUrl = "http://" + ip + ":80/spoter";
         File videoFile = getFileFromUri(context, videoUri);
         if (!videoFile.exists()) {
             toastMessage.postValue(new Pair<>("File video không tồn tại!", true));
+            tts.speak("File video không tồn tại!", TextToSpeech.QUEUE_FLUSH, null, UUID.randomUUID().toString());
             return;
         }
         MultipartBody.Builder builder = new MultipartBody.Builder().setType(MultipartBody.FORM);
@@ -415,6 +414,7 @@ public class CameraViewModel extends AndroidViewModel {
             @Override
             public void onFailure(Call call, IOException e) {
                 toastMessage.postValue(new Pair<>("Không kết nối được máy chủ.", true));
+                tts.speak("Không kết nối được máy chủ.", TextToSpeech.QUEUE_FLUSH, null, UUID.randomUUID().toString());
             }
             @Override
             public void onResponse(Call call, Response response) throws IOException {
@@ -424,23 +424,25 @@ public class CameraViewModel extends AndroidViewModel {
                 } else {
                     Log.e("NormalAPI", "Lỗi máy chủ: " + response.code());
                     toastMessage.postValue(new Pair<>("Lỗi máy chủ!", true));
+                    tts.speak("Lỗi máy chủ!", TextToSpeech.QUEUE_FLUSH, null, UUID.randomUUID().toString());
                 }
             }
         });
     }
 
-    // API gọi cho video Real-time (chuyển qua gửi qua ExecutorService)
+    // API Real-time
     private void callRealtimeTranslationApi(Context context, Uri videoUri) {
         translateRealtimeVideo(context, videoUri);
     }
 
-    // Parse kết quả API cho video Normal
+    // Parse kết quả Normal
     private void parseFullVideoApiResult(String json) {
         try {
             JSONObject obj = new JSONObject(json);
             JSONArray resultsMerged = obj.optJSONArray("results_merged");
             if (resultsMerged == null || resultsMerged.length() == 0) {
-                toastMessage.postValue(new Pair<>("Không phát hiện cử chỉ!", true));
+                toastMessage.postValue(new Pair<>("Không phát hiện cử chỉ!", false));
+                tts.speak("Không phát hiện cử chỉ!", TextToSpeech.QUEUE_FLUSH, null, UUID.randomUUID().toString());
                 return;
             }
             List<String> glosses = new ArrayList<>();
@@ -458,13 +460,15 @@ public class CameraViewModel extends AndroidViewModel {
                 showGlossesOneByOne(glosses, 0);
             } else {
                 toastMessage.postValue(new Pair<>("Không phát hiện cử chỉ!", true));
+                tts.speak("Không phát hiện cử chỉ!", TextToSpeech.QUEUE_FLUSH, null, UUID.randomUUID().toString());
             }
         } catch (JSONException e) {
             toastMessage.postValue(new Pair<>("Lỗi phân tích kết quả.", true));
+            tts.speak("Lỗi phân tích kết quả.", TextToSpeech.QUEUE_FLUSH, null, UUID.randomUUID().toString());
         }
     }
 
-    // Parse kết quả API cho video Real-time
+    // Parse kết quả Real-time
     private void parseRealtimeResponse(String json) {
         try {
             JSONObject obj = new JSONObject(json);
@@ -474,21 +478,20 @@ public class CameraViewModel extends AndroidViewModel {
                 String gloss = top.getString("gloss");
                 double score = top.getDouble("score");
                 String display = gloss + String.format(" (%.1f%%)", score * 100);
-                // Chỉ hiển thị kết quả dự đoán
                 toastMessage.postValue(new Pair<>(display, true));
                 tts.speak(gloss, TextToSpeech.QUEUE_ADD, null, UUID.randomUUID().toString());
             }
-            // Nếu không có dự đoán thì không hiển thị thông báo
         } catch (JSONException e) {
             Log.e("RealTimeParse", "Lỗi phân tích kết quả: " + e.getMessage());
         }
     }
 
-    // Hiển thị kết quả gloss từng phần (cho video Normal)
+    // Hiển thị gloss từng phần
     private final Handler glossHandler = new Handler(Looper.getMainLooper());
     private void showGlossesOneByOne(List<String> glosses, int index) {
         if (index >= glosses.size()) {
-            toastMessage.postValue(new Pair<>("Kết thúc dự đoán.", true));
+            toastMessage.postValue(new Pair<>("Kết thúc dự đoán.", false));
+            tts.speak("Kết thúc dự đoán.", TextToSpeech.QUEUE_FLUSH, null, UUID.randomUUID().toString());
             return;
         }
         String text = glosses.get(index);
@@ -521,6 +524,7 @@ public class CameraViewModel extends AndroidViewModel {
     public void toggleFlash() {
         if (camera == null) {
             toastMessage.postValue(new Pair<>("Camera chưa khởi tạo.", false));
+            tts.speak("Camera chưa khởi tạo.", TextToSpeech.QUEUE_FLUSH, null, UUID.randomUUID().toString());
             return;
         }
         if (camera.getCameraInfo().hasFlashUnit()) {
@@ -529,6 +533,7 @@ public class CameraViewModel extends AndroidViewModel {
             flashEnabled.postValue(!isFlashOn);
         } else {
             toastMessage.postValue(new Pair<>("Flash không khả dụng.", false));
+            tts.speak("Flash không khả dụng.", TextToSpeech.QUEUE_FLUSH, null, UUID.randomUUID().toString());
         }
     }
 
@@ -564,7 +569,7 @@ public class CameraViewModel extends AndroidViewModel {
         });
     }
 
-    // --- Các phương thức mới để gửi video từ queue ---
+    // Gửi video từ queue
     private void startVideoSender() {
         videoSenderExecutor.submit(() -> {
             while (!Thread.currentThread().isInterrupted()) {
@@ -592,15 +597,15 @@ public class CameraViewModel extends AndroidViewModel {
         });
     }
 
-    // Gửi video tới API sử dụng gọi đồng bộ (sử dụng execute() thay vì enqueue())
+    // Gửi video tới API
     private boolean sendVideoToApi(File videoFile) {
-        String ip = sharedPreferences.getString("api_ip", "192.168.0.100"); // Lấy IP từ SharedPreferences
-        String apiUrl = "http://" + ip + ":80/spoter_segmented"; // URL động
+        String ip = sharedPreferences.getString("api_ip", "192.168.0.100");
+        String apiUrl = "http://" + ip + ":80/spoter_segmented";
         MultipartBody.Builder builder = new MultipartBody.Builder().setType(MultipartBody.FORM);
         builder.addFormDataPart("video_file", videoFile.getName(),
                 RequestBody.create(MediaType.parse("video/mp4"), videoFile));
         builder.addFormDataPart("clientId", clientId);
-        builder.addFormDataPart("angle_threshold", "140");
+        builder.addFormDataPart("angle_threshold", "120");
         builder.addFormDataPart("top_k", "3");
 
         RequestBody reqBody = builder.build();
@@ -629,7 +634,55 @@ public class CameraViewModel extends AndroidViewModel {
             return false;
         }
     }
-    // --------------------------------------------------
+
+    // Xóa video trong thư mục CameraX-Video
+    public void clearCameraXVideos() {
+        if (context == null) {
+            toastMessage.postValue(new Pair<>("Context chưa được khởi tạo!", false));
+            tts.speak("Context chưa được khởi tạo!", TextToSpeech.QUEUE_FLUSH, null, UUID.randomUUID().toString());
+            return;
+        }
+
+        Uri collection = MediaStore.Video.Media.EXTERNAL_CONTENT_URI;
+        String[] projection = new String[] { MediaStore.Video.Media._ID };
+        String selection = MediaStore.Video.Media.RELATIVE_PATH + "=?";
+        String[] selectionArgs = new String[] { "Movies/CameraX-Video/" };
+
+        try {
+            int deletedCount = 0;
+            List<Uri> videoUrisToDelete = new ArrayList<>();
+
+            try (Cursor cursor = context.getContentResolver().query(
+                    collection, projection, selection, selectionArgs, null)) {
+                if (cursor != null && cursor.moveToFirst()) {
+                    do {
+                        long id = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Video.Media._ID));
+                        Uri videoUri = Uri.withAppendedPath(collection, String.valueOf(id));
+                        videoUrisToDelete.add(videoUri);
+                    } while (cursor.moveToNext());
+                }
+            }
+
+            if (!videoUrisToDelete.isEmpty()) {
+                for (Uri videoUri : videoUrisToDelete) {
+                    int rowsDeleted = context.getContentResolver().delete(videoUri, null, null);
+                    if (rowsDeleted > 0) {
+                        deletedCount++;
+                    }
+                }
+                toastMessage.postValue(new Pair<>("Đã xóa " + deletedCount + " video.", false));
+                tts.speak("Đã xóa " + deletedCount + " video.", TextToSpeech.QUEUE_FLUSH, null, UUID.randomUUID().toString());
+            } else {
+                toastMessage.postValue(new Pair<>("Không tìm thấy video nào trong CameraX-Video!", false));
+                tts.speak("Không tìm thấy video nào trong CameraX-Video!", TextToSpeech.QUEUE_FLUSH, null, UUID.randomUUID().toString());
+            }
+
+        } catch (Exception e) {
+            Log.e("ClearCameraX", "Lỗi khi xóa video: " + e.getMessage(), e);
+            toastMessage.postValue(new Pair<>("Lỗi khi xóa video!", false));
+            tts.speak("Lỗi khi xóa video!", TextToSpeech.QUEUE_FLUSH, null, UUID.randomUUID().toString());
+        }
+    }
 
     @Override
     protected void onCleared() {

@@ -33,20 +33,17 @@ import com.translator.vsl.R;
 import com.translator.vsl.databinding.ActivityCameraBinding;
 import com.translator.vsl.viewmodel.CameraViewModel;
 
-
 public class CameraActivity extends AppCompatActivity {
 
     private ActivityCameraBinding binding;
     private CameraViewModel viewModel;
-    private ImageButton capture, toggleFlash, flipCamera, videoStorage;
+    private ImageButton capture, toggleFlash, flipCamera, videoStorage, clearVideosButton;
     private PreviewView previewView;
     private int cameraFacing = CameraSelector.LENS_FACING_BACK;
     private Toast currentToast;
-    private PopupWindow currentPopupWindow = null;  // Track the current PopupWindow
+    private PopupWindow currentPopupWindow = null;
     private ActivityResultLauncher<Intent> videoPickerLauncher;
     private SwitchCompat translateOption;
-
-
 
     private final ActivityResultLauncher<String> activityResultLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), result -> {
@@ -56,7 +53,6 @@ public class CameraActivity extends AppCompatActivity {
             });
 
     @Override
-
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
@@ -69,7 +65,6 @@ public class CameraActivity extends AppCompatActivity {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
-
 
         binding.translateOption.setChecked(false);
 
@@ -85,16 +80,14 @@ public class CameraActivity extends AppCompatActivity {
         setupViews();
         setupObservers();
 
-        // Observe the recording state to hide/show the flip button
         viewModel.getIsRecording().observe(this, isRecording -> {
             if (isRecording) {
-                flipCamera.setVisibility(View.GONE);  // Hide the flip button when recording starts
+                flipCamera.setVisibility(View.GONE);
             } else {
-                flipCamera.setVisibility(View.VISIBLE);  // Show the flip button when recording stops
+                flipCamera.setVisibility(View.VISIBLE);
             }
         });
 
-        // Request permissions if not granted
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             activityResultLauncher.launch(Manifest.permission.CAMERA);
         } else {
@@ -111,12 +104,11 @@ public class CameraActivity extends AppCompatActivity {
                         } else {
                             showToast("Không có video nào được chọn", false);
                         }
-                    }else {
+                    } else {
                         showToast("Không có video nào được chọn", false);
                     }
                 }
         );
-
     }
 
     private void setupViews() {
@@ -125,13 +117,14 @@ public class CameraActivity extends AppCompatActivity {
         toggleFlash = binding.toggleFlash;
         flipCamera = binding.flipCamera;
         videoStorage = binding.videoStorage;
-        translateOption=binding.translateOption;
-
+        translateOption = binding.translateOption;
+        clearVideosButton = binding.clearVideosButton;
 
         capture.setOnClickListener(view -> checkPermissionsAndCapture());
         flipCamera.setOnClickListener(view -> flipCamera());
         toggleFlash.setOnClickListener(view -> viewModel.toggleFlash());
         videoStorage.setOnClickListener(view -> showSelectVideoScreen());
+        clearVideosButton.setOnClickListener(view -> viewModel.clearCameraXVideos());
     }
 
     private void setupObservers() {
@@ -143,12 +136,9 @@ public class CameraActivity extends AppCompatActivity {
                 showToast(pair.first, pair.second);
             }
         });
-
-
         viewModel.getFlashEnabledState().observe(this, isEnabled -> {
             toggleFlash.setImageResource(isEnabled ? R.drawable.baseline_flash_off_24 : R.drawable.baseline_flash_on_24);
         });
-
     }
 
     @SuppressLint("ObsoleteSdkInt")
@@ -172,39 +162,27 @@ public class CameraActivity extends AppCompatActivity {
     }
 
     private void showToast(String message, boolean isIndefinite) {
-        // Cancel any existing PopupWindow to prevent overlaps
         if (currentPopupWindow != null && currentPopupWindow.isShowing()) {
-            currentPopupWindow.dismiss();  // Dismiss the previous PopupWindow if it's showing
+            currentPopupWindow.dismiss();
         }
 
-        // Create the new toast message
         LayoutInflater inflater = getLayoutInflater();
         View customToastView = inflater.inflate(R.layout.activity_toast, null);
-
-        // Set the message in the custom toast layout
         TextView toastText = customToastView.findViewById(R.id.toast_text);
         toastText.setText(message);
 
-        // Create and show the PopupWindow for indefinite duration
         PopupWindow popupWindow = new PopupWindow(
                 customToastView,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
-                true // Focusable to allow proper dismissal
+                true
         );
 
         if (isIndefinite) {
-            // Show the indefinite PopupWindow
             popupWindow.showAtLocation(binding.getRoot(), Gravity.CENTER, 0, 0);
-
-            // Add a dismiss listener to clean up references
-            popupWindow.setOnDismissListener(() -> {
-                currentPopupWindow = null; // Clear reference when dismissed
-            });
-
-            currentPopupWindow = popupWindow; // Keep reference to the current PopupWindow
+            popupWindow.setOnDismissListener(() -> currentPopupWindow = null);
+            currentPopupWindow = popupWindow;
         } else {
-            // Show the regular Toast for short messages
             currentToast = new Toast(this);
             currentToast.setGravity(Gravity.TOP | Gravity.CENTER, 0, 32);
             currentToast.setDuration(Toast.LENGTH_SHORT);
@@ -213,7 +191,6 @@ public class CameraActivity extends AppCompatActivity {
         }
     }
 
-
     private void showSelectVideoScreen() {
         Intent intent = new Intent();
         intent.setType("video/*");
@@ -221,13 +198,9 @@ public class CameraActivity extends AppCompatActivity {
         videoPickerLauncher.launch(Intent.createChooser(intent, "Select Video"));
     }
 
-
-
     @Override
     public void finish() {
         super.finish();
         overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right);
     }
-
 }
-
