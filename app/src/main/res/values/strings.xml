@@ -9,7 +9,7 @@
     <string name="backToast">Press back again to exit</string>
     <string name="word_option">Normal</string>
     <string name="realtime_option">Real Time</string>
-
+    <string name="settings_button">Upload</string>
 
     <string-array name="translateOptions">
         <item>Word</item>

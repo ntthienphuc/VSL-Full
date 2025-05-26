@@ -4,35 +4,12 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    tools:context=".view.CameraActivity">
+    tools:context=".view.UploadActivity">
 
     <androidx.camera.view.PreviewView
         android:id="@+id/viewFinder"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
-
-    <androidx.appcompat.widget.SwitchCompat
-        android:id="@+id/translateOption"
-        android:layout_width="wrap_content"
-        android:layout_height="20dp"
-        android:layout_margin="10dp"
-        android:textStyle="bold"
-        android:buttonTint="@color/main"
-        app:thumbTint="@color/main"
-        app:trackTint="@color/gray"
-        android:scaleX="1.5"
-        android:scaleY="1.5"/>
-
-    <TextView
-        android:id="@+id/translateOptionText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="15dp"
-        android:textStyle="bold"
-        android:textSize="16sp"
-        android:text="@string/word_option"
-        android:textColor="@color/main"
-        android:layout_below="@id/translateOption" />
 
     <TextView
         android:id="@+id/recordingTime"

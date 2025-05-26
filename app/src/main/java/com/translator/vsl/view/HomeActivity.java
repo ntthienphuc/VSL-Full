@@ -1,3 +1,5 @@
+//HomeActivity.java
+
 package com.translator.vsl.view;
 
 import android.app.AlertDialog;
@@ -50,56 +52,16 @@ public class HomeActivity extends AppCompatActivity {
             overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
         });
 
-        // Xử lý nút "Thay đổi IP"
-        binding.btnChangeIp.setOnClickListener(v -> showIpDialog());
-
-        OnBackPressedDispatcher onBackPressedDispatcher = getOnBackPressedDispatcher();
-        onBackPressedDispatcher.addCallback(this, new OnBackPressedCallback(true) {
-            @Override
-            public void handleOnBackPressed() {
-                if (backPressedTime + 2000 > System.currentTimeMillis()) {
-                    backToast.cancel();
-                    finish();
-                } else {
-                    backToast = Toast.makeText(getBaseContext(), getString(R.string.backToast), Toast.LENGTH_SHORT);
-                    backToast.show();
-                }
-                backPressedTime = System.currentTimeMillis();
-            }
-        });
-    }
-
-    private void showIpDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Nhập địa chỉ IP");
-
-        // Tạo EditText để người dùng nhập IP
-        final EditText input = new EditText(this);
-        input.setHint("Ví dụ: 192.168.xx.xx");
-
-        // Lấy IP hiện tại từ SharedPreferences (nếu có)
-        SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
-        String currentIp = prefs.getString("api_ip", "192.168.0.100"); // Mặc định là 192.168.4.104
-        input.setText(currentIp);
-
-        builder.setView(input);
-
-        // Nút OK để lưu IP
-        builder.setPositiveButton("OK", (dialog, which) -> {
-            String newIp = input.getText().toString().trim();
-            if (!newIp.isEmpty()) {
-                SharedPreferences.Editor editor = prefs.edit();
-                editor.putString("api_ip", newIp);
-                editor.apply();
-                Toast.makeText(this, "Đã cập nhật IP: " + newIp, Toast.LENGTH_SHORT).show();
-            } else {
-                Toast.makeText(this, "Vui lòng nhập địa chỉ IP!", Toast.LENGTH_SHORT).show();
-            }
+        binding.terms.setOnClickListener(v -> {
+            Intent intent = new Intent(this, TermsWebViewActivity.class);
+            startActivity(intent);
+            overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
         });
 
-        // Nút Hủy để đóng dialog
-        builder.setNegativeButton("Hủy", (dialog, which) -> dialog.cancel());
 
-        builder.show();
+        binding.fabUpload.setOnClickListener(v -> {
+            startActivity(new Intent(this, SettingsActivity.class));
+            overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
+        });
     }
 }

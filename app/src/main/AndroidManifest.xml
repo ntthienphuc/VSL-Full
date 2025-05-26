@@ -42,6 +42,10 @@
         <activity android:name=".view.HomeActivity" />
         <activity android:name=".view.CameraActivity" />
         <activity android:name=".view.MenuActivity" />
+        <activity android:name=".view.SettingsActivity"/>
+        <activity android:name=".view.UploadActivity" />
+        <activity android:name=".view.HelpUploadActivity" />
+        <activity android:name=".view.TermsWebViewActivity" />
     </application>
 
 </manifest>

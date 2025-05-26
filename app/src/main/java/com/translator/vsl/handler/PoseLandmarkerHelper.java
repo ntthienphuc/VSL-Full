@@ -37,7 +37,7 @@ public class PoseLandmarkerHelper {
 //        poseLandmarker = PoseLandmarker.createFromOptions(context, optionsBuilder.build());
 //    }
 //
-//    public PoseLandmarkerResult processFrame(MPImage frame) {
+//    public PoseLandmarkerResult processFrame(MPImage frame) {FHD
 //        return poseLandmarker.detect(frame);
 //    }
 
