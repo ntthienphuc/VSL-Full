@@ -66,16 +66,14 @@ app/
 
 ## 🪠 Architecture Overview
 
-```mermaid
-graph LR
-    CameraActivity -->|bind| CameraViewModel
-    UploadActivity -->|bind| Upload logic
-    CameraViewModel --> CameraX video --> Queue((BlockingQueue))
-    Queue -- Worker --> Sender[OkHttp\n/spoter_segmented]
-    Sender -->|JSON| Parser --> LiveData --> UI
-
-    CameraViewModel -- offline --> TFLite[VideoTranslationHandler]
-    UploadActivity -- OkHttp --> API[/upload]
+```
+CameraActivity -->|bind| CameraViewModel
+UploadActivity -->|bind| Upload logic
+CameraViewModel --> CameraX video --> Queue((BlockingQueue))
+Queue -- Worker --> Sender[OkHttp\n/spoter_segmented]
+Sender -->|JSON| Parser --> LiveData --> UI
+CameraViewModel -- offline --> TFLite[VideoTranslationHandler]
+UploadActivity -- OkHttp --> API[/upload]
 ```
 
 - **MVVM + LiveData**: reactive UI updates.
