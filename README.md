@@ -70,7 +70,7 @@ app/
 graph LR
     CameraActivity -->|bind| CameraViewModel
     UploadActivity -->|bind| Upload logic
-    CameraViewModel -- CameraX video --> Queue((BlockingQueue))
+    CameraViewModel --> CameraX video --> Queue((BlockingQueue))
     Queue -- Worker --> Sender[OkHttp\n/spoter_segmented]
     Sender -->|JSON| Parser --> LiveData --> UI
 
